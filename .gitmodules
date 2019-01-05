@@ -1,0 +1,4 @@
+[submodule "anbox-playstore-installer"]
+	path = anbox-playstore-installer
+	url = https://github.com/mkg20001/anbox-playstore-installer
+	branch = fix/release-date
