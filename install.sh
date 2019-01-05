@@ -2,6 +2,11 @@
 
 set -e
 
+if [ "$(id -n)" != "0" ]; then
+	echo "ERROR: You must be root! Please re-run with 'sudo bash $0'" >&2
+	exit 2
+fi
+
 log() {
 	echo "$(date): $*"
 }
@@ -17,17 +22,17 @@ check_mods() {
 load_mods() {
 	if ! check_mods; then
 		log "Kernel modules not loaded, loading them now"
-		sudo modprobe ashmem_linux
-		sudo modprobe binder_linux
+		modprobe ashmem_linux
+		modprobe binder_linux
 	fi
 }
 
 if ! ls /etc/apt/sources.list.d/ | grep anbox-support > /dev/null; then
-	sudo add-apt-repository ppa:morphis/anbox-support
+	add-apt-repository ppa:morphis/anbox-support
 fi
 
 if ! ls /var/lib/apt/lists/ | grep anbox-support > /dev/null; then
-	sudo apt-get update
+	apt-get update
 fi
 
 need_install=()
@@ -43,14 +48,14 @@ done
 if [ ! -z "$need_install" ]; then
 	installed_kernel=true
 	log "Installing ${need_install[*]}..."
-	sudo apt-get install -y "${need_install[@]}"
+	apt-get install -y "${need_install[@]}"
 fi
 
 load_mods
 
 if ! check_mods && ! $installed_kernel; then
 	log "Mods still not loaded, trying to reconfigure dkms"
-	sudo dpkg-reconfigure anbox-modules-dkms
+	dpkg-reconfigure anbox-modules-dkms
 	load_mods
 fi
 
@@ -59,12 +64,12 @@ if ! check_mods; then
 	exit 2
 fi
 
-if ! sudo snap info anbox 2> /dev/null | grep "refresh-date" > /dev/null; then
+if ! snap info anbox 2> /dev/null | grep "refresh-date" > /dev/null; then
 	log "Installing anbox..."
-	sudo snap install --devmode --beta anbox
+	snap install --devmode --beta anbox
 else
 	log "Updating anbox..."
-	sudo snap refresh --beta --devmode anbox
+	snap refresh --beta --devmode anbox
 fi
 
 log "Installing playstore + houdini..."
