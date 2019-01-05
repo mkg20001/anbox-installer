@@ -2,6 +2,10 @@
 
 set -e
 
+log() {
+	echo "$(date): $*"
+}
+
 check_mods() {
   if [ ! -e /dev/ashmem ] || [ ! -e /dev/binder ]; then
 	  return 1
