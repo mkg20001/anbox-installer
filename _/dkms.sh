@@ -16,39 +16,53 @@ load_mods() {
 	fi
 }
 
-if ! ls /etc/apt/sources.list.d/ | grep anbox-support > /dev/null; then
-	add-apt-repository ppa:morphis/anbox-support
-fi
+needsMods=true # some ubuntu versions have them integrated, TODO: support them
 
-if ! ls /var/lib/apt/lists/ | grep anbox-support > /dev/null; then
-	apt-get update
-fi
-
-need_install=()
-installed_kernel=false
-kernel_type="$(dpkg -l | grep "ii  linux-image" | grep -o "linux-[a-z0-9.-]* "  | grep -v "[0-9]" | sed "s|linux-image-||g")" # most likely generic
-for pkg in linux-headers-$kernel_type anbox-modules-dkms; do
-	if ! dpkg -s "$pkg" > /dev/null 2> /dev/null; then
-		need_install+=($pkg)
-		log "Need to install $pkg"
+if $needsMods; then
+	if ! ls /etc/apt/sources.list.d/ | grep anbox-support > /dev/null; then
+		add-apt-repository ppa:morphis/anbox-support
 	fi
-done
 
-if [ ! -z "$need_install" ]; then
-	installed_kernel=true
-	log "Installing ${need_install[*]}..."
-	apt-get install -y "${need_install[@]}"
-fi
+	if ! ls /var/lib/apt/lists/ | grep anbox-support > /dev/null; then
+		apt-get update
+	fi
 
-load_mods
+	need_install=()
+	installed_kernel=false
+	kernel_type="$(dpkg -l | grep "ii  linux-image" | grep -o "linux-[a-z0-9.-]* "  | grep -v "[0-9]" | sed "s|linux-image-||g")" # most likely generic
+	for pkg in linux-headers-$kernel_type anbox-modules-dkms; do
+		if ! dpkg -s "$pkg" > /dev/null 2> /dev/null; then
+			need_install+=($pkg)
+			log "Need to install $pkg"
+		fi
+	done
 
-if ! check_mods && ! $installed_kernel; then
-	log "Mods still not loaded, trying to reconfigure dkms"
-	dpkg-reconfigure anbox-modules-dkms
+	if [ ! -z "$need_install" ]; then
+		installed_kernel=true
+		log "Installing ${need_install[*]}..."
+		apt-get install -y "${need_install[@]}"
+	fi
+
 	load_mods
-fi
 
-if ! check_mods; then
-	log "Giving up, please fix kernel modules"
-	exit 2
+	if ! check_mods && ! $installed_kernel; then
+		log "Mods still not loaded, trying to reconfigure dkms"
+		dpkg-reconfigure anbox-modules-dkms
+		load_mods
+	fi
+
+	if ! check_mods; then
+		log "Giving up, please fix kernel modules"
+		exit 2
+	fi
+else
+	if ! check_mods; then
+		log "Mods not loaded, loading them"
+		load_mods
+	fi
+
+	if ! check_mods; then
+		log "Giving up, please fix kernel modules"
+		exit 2
+	fi
 fi
